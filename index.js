@@ -4,9 +4,9 @@ var axios = require('axios');
 
 var languages = require('./languages.js');
 
-function extract(key, res) {
+function extract(key, data) {
     var re = new RegExp(`"${key}":".*?"`);
-    var result = re.exec(res.data);
+    var result = re.exec(data);
     if (result !== null) {
         return result[0].replace(`"${key}":"`, '').slice(0, -1);
     }
@@ -39,7 +39,8 @@ function translate(text, opts, gotopts) {
     opts.to = languages.getCode(opts.to);
 
     var url = `https://${opts.sd}.${opts.tld}`;
-    return axios(url, gotopts).then(function (res) {
+    return fetch(url, gotopts).then(res => res.text()).then(function (res) {
+
         var data = {
             'rpcids': 'MkEWBc',
             'f.sid': extract('FdrFJe', res),
@@ -54,16 +55,16 @@ function translate(text, opts, gotopts) {
 
         return data;
     }).then(function (data) {
-        gotopts.url = url + '/_/TranslateWebserverUi/data/batchexecute?' + querystring.stringify(data);
-        gotopts.data = 'f.req=' + encodeURIComponent(JSON.stringify([[['MkEWBc', JSON.stringify([[text, opts.from, opts.to, true], [null]]), null, 'generic']]])) + '&';
+        url = url + '/_/TranslateWebserverUi/data/batchexecute?' + querystring.stringify(data);
+        gotopts.body = 'f.req=' + encodeURIComponent(JSON.stringify([[['MkEWBc', JSON.stringify([[text, opts.from, opts.to, true], [null]]), null, 'generic']]])) + '&';
         gotopts.headers = gotopts.headers || {};
         gotopts.headers['content-type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
         gotopts.method = 'post';
 
-        return axios(gotopts).then(function (res) {
+        return fetch(url, gotopts).then(res=> res.text()).then(function (res) {
             var sep = '######';
             // Use a double linebreak as a separator, as length is not always returned
-            var json = res.data
+            var json = res
                 .replace(/\n?\n\d*\n/gi, sep)
                 .split(sep)
                 .find(x => x.startsWith('[['));
